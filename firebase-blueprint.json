@@ -1,0 +1,223 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Represents an authenticated patient user registered in HealthSaathi",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique Firebase Auth identifier of the user"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the user"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Primary verified email address of the user"
+        },
+        "createdAt": {
+          "type": "any",
+          "description": "Timestamp indicating when the profile was registered"
+        }
+      },
+      "required": ["uid", "name", "email", "createdAt"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Represents a clinic or video-consultation appointment booked with a healthcare provider",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Auto-generated document ID for the booking"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Unique user ID of the patient booking the appointment"
+        },
+        "userEmail": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address of the booking patient"
+        },
+        "userName": {
+          "type": "string",
+          "description": "Full name of the booking patient"
+        },
+        "doctorId": {
+          "type": "string",
+          "description": "Identifier of the target doctor"
+        },
+        "doctorName": {
+          "type": "string",
+          "description": "Name of the target doctor"
+        },
+        "specialty": {
+          "type": "string",
+          "description": "Medical specialty of the target doctor"
+        },
+        "hospital": {
+          "type": "string",
+          "description": "Hospital/clinic where the session takes place"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the appointment in YYYY-MM-DD format"
+        },
+        "time": {
+          "type": "string",
+          "description": "Time slot of the appointment (e.g., 10:00 AM)"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Confirmed", "Completed", "Cancelled", "In Consultation"],
+          "description": "Current systemic status of clinical check"
+        },
+        "fees": {
+          "type": "number",
+          "description": "Professional OPD fee rate in INR"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["In-Clinic", "Video Call"],
+          "description": "Avenue format"
+        },
+        "createdAt": {
+          "type": "any",
+          "description": "Record generation timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "userEmail",
+        "userName",
+        "doctorId",
+        "doctorName",
+        "specialty",
+        "hospital",
+        "date",
+        "time",
+        "status",
+        "fees",
+        "type",
+        "createdAt"
+      ]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Represents a dynamic secure channel thread established between a Patient User and a Doctor",
+      "type": "object",
+      "properties": {
+        "conversationId": {
+          "type": "string",
+          "description": "The unique thread reference identifier"
+        },
+        "patientId": {
+          "type": "string",
+          "description": "The authenticated paciente user auth UID reference"
+        },
+        "doctorId": {
+          "type": "string",
+          "description": "Doctor profile unique identifier"
+        },
+        "doctorName": {
+          "type": "string",
+          "description": "Direct name representation of the health consultant"
+        },
+        "doctorSpecialty": {
+          "type": "string",
+          "description": "Medical degree specialty summary"
+        },
+        "doctorAvatar": {
+          "type": "string",
+          "description": "Web referrable visual icon representation"
+        },
+        "lastMessage": {
+          "type": "string",
+          "description": "Last sent or received encrypted text block preview"
+        },
+        "lastMessageTime": {
+          "type": "string",
+          "description": "Date tag in clinical workspace clock format"
+        },
+        "lastMessageTimestamp": {
+          "type": "any",
+          "description": "Comparison coordinate time value"
+        },
+        "unreadCount": {
+          "type": "number",
+          "description": "Number of received but un-read message cards in this channel"
+        }
+      },
+      "required": ["conversationId", "patientId", "doctorId", "doctorName", "lastMessage", "lastMessageTimestamp", "unreadCount"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Represents a standalone secure clinical chat bubble transmitted within a secure medical channel",
+      "type": "object",
+      "properties": {
+        "messageId": {
+          "type": "string",
+          "description": "Standalone transmission coordinate"
+        },
+        "conversationId": {
+          "type": "string",
+          "description": "Parent channel ID"
+        },
+        "patientId": {
+          "type": "string",
+          "description": "The authenticated paciente user auth UID reference"
+        },
+        "senderId": {
+          "type": "string",
+          "description": "Author user UID (or doctor id)"
+        },
+        "receiverId": {
+          "type": "string",
+          "description": "Target doctor or user recipient"
+        },
+        "message": {
+          "type": "string",
+          "description": "Transmitted text contents"
+        },
+        "timestamp": {
+          "type": "any",
+          "description": "Time of dispatch"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["text", "file", "voice"],
+          "description": "Transmissibility format types"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["sent", "delivered", "read"],
+          "description": "Transmission flow safety checklist status"
+        }
+      },
+      "required": ["messageId", "conversationId", "patientId", "senderId", "receiverId", "message", "timestamp", "type", "status"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles root documents storing basic credentials and system role registration"
+    },
+    "bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Appointment items root level collection linked to patient identifiers"
+    },
+    "conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "Clinical active messages threads tracking channels setup"
+    },
+    "messages/{messageId}": {
+      "schema": "Message",
+      "description": "Standalone message items for full conversational channels"
+    }
+  }
+}

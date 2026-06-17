@@ -1,0 +1,130 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global safety net - Default Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Hardened Reusable Global Helpers ---
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Entity Specific Validation Blueprints (Anti-Update-Gap) ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'name', 'email', 'createdAt'])
+        && data.keys().size() == 4
+        && data.uid is string
+        && data.uid.size() <= 128
+        && data.name is string
+        && data.name.size() > 0
+        && data.name.size() <= 500
+        && data.email is string
+        && data.email.size() > 0
+        && data.email.size() <= 256
+        && (data.createdAt == request.time || data.createdAt is string || data.createdAt != null);
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll([
+          'id', 'userId', 'userEmail', 'userName', 'doctorId', 'doctorName', 
+          'specialty', 'hospital', 'date', 'time', 'status', 'fees', 'type', 'createdAt'
+        ])
+        && data.keys().size() == 14
+        && data.id is string
+        && data.id.size() <= 128
+        && data.userId is string
+        && data.userId.size() <= 128
+        && data.userEmail is string
+        && data.userEmail.size() <= 256
+        && data.userName is string
+        && data.userName.size() <= 500
+        && data.doctorId is string
+        && data.doctorId.size() <= 128
+        && data.doctorName is string
+        && data.doctorName.size() <= 500
+        && data.specialty is string
+        && data.specialty.size() <= 500
+        && data.hospital is string
+        && data.hospital.size() <= 1000
+        && data.date is string
+        && data.date.size() == 10 // YYYY-MM-DD
+        && data.time is string
+        && data.time.size() <= 100
+        && data.status is string
+        && (data.status == 'Confirmed' || data.status == 'Completed' || data.status == 'Cancelled' || data.status == 'In Consultation')
+        && data.fees is number
+        && data.fees >= 0
+        && data.fees <= 100000
+        && data.type is string
+        && (data.type == 'In-Clinic' || data.type == 'Video Call')
+        && (data.createdAt == request.time || data.createdAt is string || data.createdAt != null); // Allow backward compatible local values or request.time
+    }
+
+    // --- Collections matching block ---
+
+    // USERS COLLECTION
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUser(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt;
+      allow delete, list: if false;
+    }
+
+    // BOOKINGS COLLECTION
+    match /bookings/{bookingId} {
+      allow get: if isSignedIn() && isValidId(bookingId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && (resource == null || !('userId' in resource.data) || resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && isValidId(bookingId) 
+        && incoming().userId == request.auth.uid 
+        && isValidBooking(incoming());
+      allow update: if isSignedIn() && isValidId(bookingId)
+        && existing().userId == request.auth.uid
+        && incoming().userId == request.auth.uid
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && isValidBooking(incoming());
+      allow delete: if isSignedIn() && isValidId(bookingId) && existing().userId == request.auth.uid;
+    }
+
+    // CONVERSATIONS COLLECTION
+    match /conversations/{conversationId} {
+      allow get: if isSignedIn() && isValidId(conversationId) && existing().patientId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.patientId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(conversationId) && incoming().patientId == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(conversationId) && existing().patientId == request.auth.uid && incoming().patientId == request.auth.uid;
+      allow delete: if isSignedIn() && isValidId(conversationId) && existing().patientId == request.auth.uid;
+    }
+
+    // MESSAGES COLLECTION
+    match /messages/{messageId} {
+      allow get: if isSignedIn() && isValidId(messageId) && (existing().patientId == request.auth.uid || existing().senderId == request.auth.uid || existing().receiverId == request.auth.uid);
+      allow list: if isSignedIn() && (resource.data.patientId == request.auth.uid || resource.data.senderId == request.auth.uid || resource.data.receiverId == request.auth.uid);
+      allow create: if isSignedIn() && isValidId(messageId) && (incoming().patientId == request.auth.uid || incoming().senderId == request.auth.uid);
+      allow update: if isSignedIn() && isValidId(messageId) && (existing().patientId == request.auth.uid || existing().senderId == request.auth.uid || existing().receiverId == request.auth.uid);
+      allow delete: if isSignedIn() && isValidId(messageId) && (existing().patientId == request.auth.uid || existing().senderId == request.auth.uid || existing().receiverId == request.auth.uid);
+    }
+  }
+}

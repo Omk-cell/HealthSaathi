@@ -1,0 +1,9 @@
+{
+  "name": "HealthSaathi",
+  "description": "Your modern digital health companion matching appointments, medical records, telemedicine advice, and symptom checking.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
